@@ -13,7 +13,7 @@ from tempfile import mkdtemp
 
 from pbcore.io import FastqReader
 
-LaaRecord = namedtuple("LaaRecord", ["id", "sequence", "qualities", "quality", "noise", "chimera", "converged", "subreads"])
+LaaRecord = namedtuple("LaaRecord", ["id", "sequence", "qualities", "quality", "barcode", "cluster", "phase", "coverage", "noise", "chimera", "converged", "subreads"])
 
 def which(exe, env=os.environ):
     def isExe(p):
@@ -56,6 +56,9 @@ class LaaPhaser(object):
             with open(os.path.join(tmpdir, "amplicon_analysis_summary.csv")) as summ:
                 rdr = csv.reader(summ)
                 hdr = next(rdr)
+                cluster = hdr.index("CoarseCluster") - 2
+                phase = hdr.index("Phase") - 2
+                coverage = hdr.index("TotalCoverage") - 2
                 readQuality = hdr.index("PredictedAccuracy") - 2
                 didConverge = hdr.index("ConsensusConverged") - 2
                 isChimera = hdr.index("IsChimera") - 2
@@ -75,7 +78,9 @@ class LaaPhaser(object):
                 for rec in rdr:
                     attrs = recData[rec.id]
                     subreads = srData[rec.id]
-                    records.append(LaaRecord(rec.id, rec.sequence, rec.quality, float(attrs[readQuality]), isNoise, bool(int(attrs[isChimera])), bool(int(attrs[didConverge])), subreads))
+                    records.append(LaaRecord(rec.id, rec.sequence, rec.quality, float(attrs[readQuality]),
+                                             self.__barcode, int(attrs[cluster]), int(attrs[phase]), int(attrs[coverage]),
+                                             isNoise, bool(int(attrs[isChimera])), bool(int(attrs[didConverge])), subreads))
             self.__records = records
         finally:
             rmtree(tmpdir)
